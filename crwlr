@@ -1,0 +1,61 @@
+type tree = Empty 
+          | Node of int * tree * tree
+type command = Left | Right | Up | New of int | Delete | Push | Pop
+
+(* print a graphical representation (dot) of a binary tree (2. argument) to a file (1. argument) *)
+let print_tree filename btree = 
+  let file = open_out filename in
+  Printf.fprintf file "digraph Tree {\n";
+  let rec print next_id = function Empty -> 
+    Printf.fprintf file "\tn%d[shape=rectangle,label=\"\"];\n" next_id; next_id + 1, next_id
+  | Node (x, l, r) ->
+    let node_id = next_id in
+    Printf.fprintf file "\tn%d[label=\"%d\"];\n" node_id x;
+    let next_id, lid = print (next_id + 1) l in
+    let next_id, rid = print next_id r in 
+    (Printf.fprintf file "\tn%d -> n%d[label=\"L\"];\n" node_id lid);
+    (Printf.fprintf file "\tn%d -> n%d[label=\"R\"];\n" node_id rid);
+    next_id, node_id
+  in
+  ignore(print 0 btree);
+  Printf.fprintf file "}";
+  close_out file
+
+
+let crawl cmds tree =
+  let  insert_at_place tree place node =
+    let rec reversed tree place node = 
+      match tree, place with
+      | _,[] -> node
+      | Node (v, l, r), x::xs -> if x = Left then Node(v, (reversed tree xs node), r)
+          else Node(v, l, (reversed tree xs node))
+      |_,_ -> tree
+    in reversed tree (List.rev place)  node  
+  in
+  let first_of_list lst = 
+    match lst with
+    | x::xs -> x
+  in    
+  let last_of_list lst = 
+    match lst with
+    | x::xs -> xs    
+  in
+  let helper_new cmd = 
+    match cmd with
+    | New i -> Node(i, Empty, Empty) 
+
+  in
+
+  let rec  crawling cmds tree place  =
+    match cmds with
+    | []-> tree
+    | x::xs -> 
+        if x = Push then crawling xs tree place else
+        if x = Pop then crawling xs tree place else
+        if x = Left then crawling xs tree (x::place) 
+        else if x = Right then crawling xs tree (x::place) 
+        else if x = Up then crawling xs tree (last_of_list place) 
+        else if x = Delete then crawling xs (insert_at_place tree place Empty) place
+        else crawling xs (insert_at_place tree place (helper_new x)) place
+
+  in crawling cmds tree []         
